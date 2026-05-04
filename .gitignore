@@ -1,0 +1,22 @@
+# Data and generated artifacts
+dataset/
+saved_model/
+logs/
+result/
+.ckpts/
+
+# Python cache
+__pycache__/
+**/__pycache__/
+*.py[cod]
+*$py.class
+
+# Notebook/editor checkpoints
+.ipynb_checkpoints/
+**/.ipynb_checkpoints/
+
+# Environment and local files
+.env
+.venv/
+venv/
+

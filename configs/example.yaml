@@ -1,0 +1,94 @@
+dataset_path: "./dataset"
+
+checkpoint_dir: .ckpts
+seed: 42
+bias: False
+test_name: 'low'
+
+sparsekt_config:
+  embedding_size: 64
+  num_blocks: 2
+  kq_same: True
+  num_attn_heads: 8
+  final_fc_dim: 512
+  final_fc_dim2: 512
+  d_ff: 1024
+  dropout: 0.05
+  separate_qr: False
+  emb_type: "qid_sparseattn"
+  sparse_ratio: 0.8
+  k_index: 5
+
+folibikt_config:
+  embedding_size: 64
+  num_blocks: 2
+  kq_same: True
+  emb_type: "qid_alibi"
+  num_attn_heads: 8
+  final_fc_dim: 512
+  d_ff: 1024
+  l2: 1e-5
+  dropout: 0.05
+  separate_qr: False
+  num_buckets: 16
+  max_distance: 50
+
+akt_config:
+  embedding_size: 64
+  num_blocks: 2
+  kq_same: True
+  num_attn_heads: 8
+  final_fc_dim: 512
+  d_ff: 1024
+  l2: 1e-5
+  dropout: 0.05
+  separate_qr: False
+
+diskt_config:
+  embedding_size: 64
+  num_blocks: 2
+  kq_same: True
+  num_attn_heads: 8
+  final_fc_dim: 512
+  final_fc_dim2: 256
+  d_ff: 1024
+  l2: 1e-5
+  dropout: 0.05
+  separate_qr: False
+
+simplekt_config:
+  embedding_size: 64
+  num_blocks: 2
+  kq_same: True
+  num_attn_heads: 8
+  final_fc_dim: 512
+  final_fc_dim2: 256
+  d_ff: 1024
+  l2: 1e-5
+  dropout: 0.05
+  separate_qr: False
+
+dkt_config:
+  embedding_size: 64
+  dropout: 0.2
+  
+train_config:
+  wl: 0.00001
+  log_wandb_fold: True
+  sequence_option: "recent" # early or recent
+  seq_len: 50
+  batch_size: 512
+  eval_batch_size: 512
+  num_epochs: 1200
+  print_epochs: 1
+  max_grad_norm: 0
+  learning_rate: 0.001
+  optimizer: adam
+  
+  loss: BCE
+
+  ## Model Save
+  save_model: False
+  save_epochs: 1
+  save_model_name: "tmp"
+  log_path: "logs"
