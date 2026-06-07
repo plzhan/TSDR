@@ -4,6 +4,8 @@ Temporal Smoothness Doubly Robust Learning for Debiased Knowledge Tracing
 
 知识追踪任务通常只使用学生已经作答或平台已经记录的交互数据训练模型。但在真实自适应学习系统中，题目推荐、学生跳题、学生自主选择等机制会导致数据并非随机缺失，而是 MNAR, Missing Not At Random。这会让模型把有偏观测误认为真实掌握状态，进而影响后续推荐。
 
+<img src="P:\Notes\picture\i.png" style="zoom: 40%;" />
+
 TSDR 的目标是：
 
 - 用 Doubly Robust 学习修正 KT 中由非随机观测带来的选择偏差。
