@@ -1,19 +1,31 @@
 # TSDR
+Official code for "Temporal Smoothness Doubly Robust Learning for Debiased Knowledge Tracing" (IJCAI 2026)
 
-Temporal Smoothness Doubly Robust Learning for Debiased Knowledge Tracing
 
-知识追踪任务通常只使用学生已经作答或平台已经记录的交互数据训练模型。但在真实自适应学习系统中，题目推荐、学生跳题、学生自主选择等机制会导致数据并非随机缺失，而是 MNAR, Missing Not At Random。这会让模型把有偏观测误认为真实掌握状态，进而影响后续推荐。
+TSDR is a plug-and-play debiasing framework for Knowledge Tracing (KT). It is designed for educational logs that are selectively observed rather than randomly sampled. In real adaptive learning systems, exercise recommendation, student skipping, and self-selection can make the logged interactions Missing Not At Random (MNAR). Training KT models only on these observed logs may therefore mix true mastery with the data collection policy and produce biased knowledge-state estimates.
 
-<img src="P:\Notes\picture\i.png" style="zoom: 40%;" />
+![Selection bias in knowledge tracing](images/i.png)
 
-TSDR 的目标是：
+## Core Idea
 
-- 用 Doubly Robust 学习修正 KT 中由非随机观测带来的选择偏差。
-- 同时建模 propensity, 即交互被观测到的概率，以及 imputation, 即未观测交互的潜在误差。
-- 在序列 KT 场景中加入 temporal smoothness 约束，缓解 DR 估计器的方差累积和训练震荡。
-- 作为 plug-and-play 框架增强 DKT, AKT, simpleKT, FoLiBiKT, SparseKT, DisKT 等骨干模型。
+TSDR reframes KT training as debiased risk estimation over the full space of potential student-concept interactions, not only the interactions that happen to be observed.
 
-## 文档结构
+The framework contains three components:
+
+- **KT predictor:** predicts the probability that a student answers the next question correctly from historical interactions.
+- **Propensity model:** estimates the probability that a concept or item is observed under the current student state.
+- **Imputation model:** estimates the counterfactual prediction error for unobserved interactions.
+
+The doubly robust objective combines propensity-based correction with error imputation. It can remain unbiased if either the propensity model or the imputation model is accurate. However, directly applying doubly robust learning to sequential KT can introduce high variance and unstable training. TSDR therefore adds a **temporal smoothness regularizer** to the imputation trajectory, reducing variance accumulation while preserving the doubly robust correction.
+
+## Features
+
+- Supports multiple KT backbones: `DKT`, `AKT`, `simpleKT`, `FoLiBiKT`, `SparseKT`, and `DisKT`.
+- Provides baseline, IPW-only, imputation-only, and doubly robust training modes.
+- Adds temporal smoothness through the `--lambda` hyperparameter.
+- Uses student-stratified cross-validation and reports AUC, ACC, and RMSE.
+
+## Repository Structure
 
 ```text
 TSDR/
@@ -24,6 +36,8 @@ TSDR/
   preprocess_data.py
   configs/
     example.yaml
+  images/
+    i.png
   models/
     __init__.py
     akt.py
@@ -42,43 +56,91 @@ TSDR/
     visualizer.py
 ```
 
-## 核心思想
+## Installation
 
-TSDR 将 KT 预测风险从只在观测日志上计算，扩展为面向完整潜在交互空间的偏差校正估计。它包含三类模型：
+Create a Python environment and install the main dependencies:
 
-- KT predictor: 根据历史交互预测下一题答对概率。
-- Propensity model: 估计某个 concept 或 item 在当前状态下被观测的概率。
-- Imputation model: 估计反事实交互上的预测误差。
-
-普通 DR 可以在 propensity 或 imputation 任一模型准确时保持无偏，但在序列学习中可能因为权重和误差噪声造成高方差。TSDR 因此对隐状态轨迹加入 temporal smoothness regularization，使知识状态变化更连续，降低训练不稳定性。
-
-## 快速使用参考
-
-在参考代码工程中运行普通 KT：
-
-```powershell
-cd TSDR
-python main.py --model_name akt --data_name prob
+```bash
+pip install torch numpy pandas scipy scikit-learn accelerate pyyaml tqdm
 ```
 
-启用 TSDR 训练：
+The exact PyTorch installation command may depend on your CUDA version. See the official PyTorch installation guide if GPU support is needed.
 
-```powershell
+## Data
+
+By default, datasets are expected under:
+
+```text
+./dataset/<data_name>/
+```
+
+The training script reads the dataset path from `configs/example.yaml`:
+
+```yaml
+dataset_path: "./dataset"
+```
+
+Each processed dataset should contain a `preprocessed_df.csv` file. If raw data are used, run or adapt `preprocess_data.py` for the corresponding dataset.
+
+## Quick Start
+
+Train a standard KT baseline:
+
+```bash
+python main.py --model_name akt --data_name prob --baseline
+```
+
+Train with the full TSDR objective:
+
+```bash
 python main.py --model_name akt --data_name prob --dr --lambda 0.3
 ```
 
-只启用 IPW：
+Train with inverse propensity weighting only:
 
-```powershell
+```bash
 python main.py --model_name akt --data_name prob --ipw
 ```
 
-只启用 imputation：
+Train with imputation only:
 
-```powershell
+```bash
 python main.py --model_name akt --data_name prob --imput
 ```
 
-## 致谢
+## Main Arguments
 
-本项目的部分代码基于 [DisKT](https://github.com/zyy-2001/DisKT) 进行修改与扩展，在此对原项目作者的开源贡献表示感谢。
+| Argument | Description |
+| --- | --- |
+| `--model_name` | KT backbone. Choices: `dkt`, `akt`, `simplekt`, `folibikt`, `sparsekt`, `diskt`. |
+| `--data_name` | Dataset name under `./dataset`. |
+| `--baseline` | Train the original backbone without debiasing. |
+| `--ipw` | Use inverse propensity weighting. |
+| `--imput` | Use the imputation model without IPW correction. |
+| `--dr` | Use doubly robust learning. |
+| `--lambda` | Temporal smoothness strength. |
+| `--dropout` | Dropout probability. |
+| `--batch_size` | Training and evaluation batch size. |
+| `--embedding_size` | Embedding size for supported backbones. |
+| `--lr` | Learning rate. |
+| `--optimizer` | Optimizer name. |
+| `--mode` | Optional experiment mode for controlled settings. |
+
+The training-mode flags `--baseline`, `--ipw`, `--imput`, and `--dr` are mutually exclusive. If none is specified, the script defaults to baseline training.
+
+## Supported Backbones
+
+The current implementation supports:
+
+- `dkt`
+- `akt`
+- `simplekt`
+- `folibikt`
+- `sparsekt`
+- `diskt`
+
+TSDR wraps these backbones during training. The additional propensity and imputation modules are used for debiased offline training, while online inference can still use the KT predictor.
+
+## Code Credits
+
+Part of this codebase is adapted from and extended upon [DisKT](https://github.com/zyy-2001/DisKT). We thank the original authors for their open-source contribution.
